@@ -9,9 +9,28 @@ from ..losses.loss import GeneratorLoss, DiscriminatorLoss
 __all__ = ['Trainer']
 
 class Trainer(object):
+    r"""Base class for all Trainers for various GANs.
+
+    Features provided by this Base Trainer are:
+
+    - Loss and Metrics Logging
+    - Generating Image Samples
+    - Logging using Tensorboard
+    - Saving models at the end of every epoch and loading of previously saved models
+    - Highly flexible and allows changing hyperparameters by simply adjusting the keyword arguments.
+    - Custom `train_ops` by mapping the function signature with the values stored in the object
+
+    Most of the functionalities provided by the Trainer are flexible enough and can be customized by
+    simply passing different arguments. However, in case things cannot be done with these techniques,
+    the following functions need to be overloaded.
+
+    - `save_model_extras`
+    - `load_model_extras`
+    - `train_iter_custom`
+    """
     def __init__(self, generator, discriminator, optimizer_generator, optimizer_discriminator,
-                 losses_list, metrics_list=None, device=torch.device("cuda:0"), ndiscriminator=-1, batch_size=128,
-                 sample_size=8, epochs=5, checkpoints="./model/gan", retain_checkpoints=5,
+                 losses_list, metrics_list=None, device=torch.device("cuda:0"), ndiscriminator=-1,
+                 batch_size=128, sample_size=8, epochs=5, checkpoints="./model/gan", retain_checkpoints=5,
                  recon="./images", test_noise=None, log_tensorboard=True, **kwargs):
         self.device = device
         self.generator = generator.to(self.device)
@@ -82,10 +101,41 @@ class Trainer(object):
         self.labels_provided = kwargs["labels_provided"] if "labels_provided" in kwargs\
                                         else False
 
-    def save_model_extras(self, save_path):
+    def save_model_extras(self):
+        r"""This function needs to be extended in the subclass for saving additional data
+        at the end of the epoch.
+
+        Returns:
+            A dictionary storing a map between a `label` and the `value to be stored`.
+
+        Example:
+            >>> # To save a parameter `val_to_save` which is defined in the subclass redefine the function
+            >>> # as follows.
+            >>> def save_model_extras(self):
+            ...     return {'val_to_save': self.val_to_save}
+        """
         return {}
 
     def save_model(self, epoch):
+        r"""Function saves the model and some necessary information along with it. List of items
+        stored for future reference:
+
+        - Epoch
+        - Generator State
+        - Discriminator State
+        - Optimizer Generator State
+        - Optimizer Discriminator State
+        - Loss Information
+            - Total Generator Loss and Generator Iterations
+            - Total Discriminator Loss and Discriminator Iterations
+        - Loss Objects
+        - Metric Objects
+        - Loss Logs
+        - Metric Logs
+
+        Args:
+            epoch (int, optional): Epoch Number at which the model is being saved
+        """
         if self.last_retained_checkpoint == self.retain_checkpoints:
             self.last_retained_checkpoint = 0
         save_path = self.checkpoints + str(self.last_retained_checkpoint) + '.model'
@@ -104,13 +154,44 @@ class Trainer(object):
             'metric_logs': self.metric_logs
         }
         # FIXME(avik-pal): Not a very good function name
-        model.update(self.save_model_extras(save_path))
+        model.update(self.save_model_extras())
         torch.save(model, save_path)
 
-    def load_model_extras(self, load_path):
+    def load_model_extras(self, model_dict):
+        r"""This function needs to be extended in the subclass for loading additional data.
+        The function should not return any value. It must simply store the value loaded in a
+        variable.
+
+        Args:
+            model_dict (dict): The dictionary loaded from the `load_path`.
+
+        Example:
+            >>> # To load a parameter `val_to_load` which was saved in the model
+            >>> def load_model_extras(self, model_dict):
+            ...     self.val_to_load = model_dict['val_to_load']
+        """
         pass
 
     def load_model(self, load_path=""):
+        r"""Function to load the model and some necessary information along with it. List of items
+        loaded:
+
+        - Epoch
+        - Generator State
+        - Discriminator State
+        - Optimizer Generator State
+        - Optimizer Discriminator State
+        - Loss Information
+            - Total Generator Loss and Generator Iterations
+            - Total Discriminator Loss and Discriminator Iterations
+        - Loss Objects
+        - Metric Objects
+        - Loss Logs
+        - Metric Logs
+
+        Args:
+            load_path (string, optional): Path from which the model is to be loaded.
+        """
         if load_path == "":
             load_path = self.checkpoints + str(self.last_retained_checkpoint) + '.model'
         print("Loading Model From '{}'".format(load_path))
@@ -124,10 +205,11 @@ class Trainer(object):
             self.metric_logs = check['metric_logs']
             self.generator.load_state_dict(check['generator'])
             self.discriminator.load_state_dict(check['discriminator'])
+            # NOTE(avik-pal): Check if we need to pass the parameters again
             self.optimizer_generator.load_state_dict(check['optimizer_generator'])
             self.optimizer_discriminator.load_state_dict(check['optimizer_discriminator'])
             # FIXME(avik-pal): Not a very good function name
-            self.load_model_extras(check)
+            self.load_model_extras(load_path)
         except:
             warn("Model could not be loaded from {}. Training from Scratch".format(load_path))
             self.start_epoch = 0

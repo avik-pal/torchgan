@@ -12,3 +12,8 @@ Currently supported Trainers include:
 
 .. contents::
     :local:
+
+Trainer
+-------
+.. autoclass:: Trainer
+    :members:
