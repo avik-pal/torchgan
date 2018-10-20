@@ -52,11 +52,12 @@ class MutualInformationPenalty(GeneratorLoss, DiscriminatorLoss):
         return reduce(-1.0 * log_probs, self.reduction)
 
     def train_ops(self, generator, discriminator, optimizer_generator,
-                  optimizer_discriminator, dis_code, cont_code, noise):
+                  optimizer_discriminator, dis_code, cont_code, device):
         if self.override_train_ops is not None:
             self.override_train_ops(self, generator, discriminator, optimizer_generator,
                                     optimizer_discriminator, dis_code, cont_code, noise)
         else:
+            noise = torch.randn(real.size(0), generator.encoding_dims, device=device)
             optimizer_discriminator.zero_grad()
             optimizer_generator.zero_grad()
             fake = generator(noise, dis_code, cont_code)
