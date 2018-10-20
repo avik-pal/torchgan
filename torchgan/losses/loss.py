@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 __all__ = ['GeneratorLoss', 'DiscriminatorLoss']
@@ -16,12 +17,11 @@ class GeneratorLoss(nn.Module):
         self.reduction = reduction
         self.override_train_ops = override_train_ops
 
-    def train_ops(self, generator, discriminator, optimizer_generator, device):
+    def train_ops(self, generator, discriminator, optimizer_generator, device, batch_size):
         if self.override_train_ops is not None:
-            return self.override_train_ops(generator, discriminator, optimizer_generator)
+            return self.override_train_ops(generator, discriminator, optimizer_generator, device, batch_size)
         else:
-            noise = torch.randn(real.size(0), generator.encoding_dims,
-                                device=device)
+            noise = torch.randn(batch_size, generator.encoding_dims, device=device)
             optimizer_generator.zero_grad()
             dgz = discriminator(generator(noise))
             loss = self.forward(dgz)
