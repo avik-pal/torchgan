@@ -1,7 +1,7 @@
 import torch
 import torchvision
 from warnings import warn
-from inspect import getfullargspec
+from inspect import signature, _empty
 from operator import itemgetter
 from tensorboardX import SummaryWriter
 from ..models.model import Generator, Discriminator
@@ -27,9 +27,9 @@ class Trainer(object):
             self.optimizer_names.append(key)
             model = getattr(self, key.split("_", 1)[1])
             if "args" in val:
-                setattr(self, key, val["name"](model, **val["args"]))
+                setattr(self, key, val["name"](model.parameters(), **val["args"]))
             else:
-                setattr(self, key, val["name"](model))
+                setattr(self, key, val["name"](model.parameters()))
         self.schedulers = []
         if schedulers is not None:
             for key, val in schedulers.items():
@@ -149,13 +149,15 @@ class Trainer(object):
             return self.tensorboard_information["step"]
 
     def sample_images(self, epoch):
+        pos = 0
         for model in self.model_names:
             if isinstance(getattr(self, model), Generator):
                 save_path = "{}/epoch{}_{}.png".format(self.recon, epoch + 1, model)
                 print("Generating and Saving Images to {}".format(save_path))
                 generator = getattr(self, model)
                 with torch.no_grad():
-                    images = generator(self.test_noise.to(self.device))
+                    images = generator(self.test_noise[pos].to(self.device))
+                    pos = pos + 1
                     img = torchvision.utils.make_grid(images)
                     torchvision.utils.save_image(img, save_path, nrow=self.nrow)
                     if self.log_tensorboard:
@@ -183,11 +185,12 @@ class Trainer(object):
                                     "Running Generator Loss": running_generator_loss},
                                    self._get_step())
             for name, value in self.loss_logs.items():
-                if type(value) is tuple:
-                    self.writer.add_scalar('Losses/{}-Generator'.format(name), value[0], self._get_step(False))
-                    self.writer.add_scalar('Losses/{}-Discriminator'.format(name), value[1], self._get_step(False))
+                val = value[-1]
+                if type(val) is tuple:
+                    self.writer.add_scalar('Losses/{}-Generator'.format(name), val[0], self._get_step(False))
+                    self.writer.add_scalar('Losses/{}-Discriminator'.format(name), val[1], self._get_step(False))
                 else:
-                    self.writer.add_scalar('Losses/{}'.format(name), value, self._get_step(False))
+                    self.writer.add_scalar('Losses/{}'.format(name), val, self._get_step(False))
 
     def tensorboard_log_metrics(self, epoch):
         if self.tensorboard_log:
@@ -203,13 +206,13 @@ class Trainer(object):
             setattr(self, mappings[0], mappings[1])
 
     def _get_argument_maps(self, func):
-        sig = getfullargspec(func)
-        args = sig.args
+        sig = signature(func)
+        args = [p.name for p in sig.parameters.values() if p.default is _empty]
         for arg in args:
             if arg not in self.__dict__:
-                raise Exception("Argument : %s not present. If the value is stored with some other\
+                raise Exception("Argument : {} not present. If the value is stored with some other\
                                  name use the function `set_arg_maps`".format(arg))
-        for arg in sig.kwonlyargs:
+        for arg in [p.name for p in sig.parameters.values() if p.default is not _empty]:
             if arg in self.__dict__:
                 args.append(arg)
         return args
@@ -243,7 +246,7 @@ class Trainer(object):
         ldis, lgen, dis_iter, gen_iter = 0.0, 0.0, 0, 0
         for name, loss in self.losses.items():
             if isinstance(loss, GeneratorLoss) and isinstance(loss, DiscriminatorLoss):
-                cur_loss = loss.train_ops(self._get_arguments(self.loss_arg_maps[name]))
+                cur_loss = loss.train_ops(**self._get_arguments(self.loss_arg_maps[name]))
                 self.loss_logs[name].append(cur_loss)
                 if type(cur_loss) is tuple:
                     lgen, ldis, gen_iter, dis_iter = lgen + cur_loss[0], ldis + cur_loss[1],\
@@ -251,11 +254,11 @@ class Trainer(object):
             elif isinstance(loss, GeneratorLoss):
                 if self.ncritic is None or\
                    self.loss_information["discriminator_iters"] % self.ncritic == 0:
-                    cur_loss = loss.train_ops(self._get_arguments(self.loss_arg_maps[name]))
+                    cur_loss = loss.train_ops(**self._get_arguments(self.loss_arg_maps[name]))
                     self.loss_logs[name].append(cur_loss)
                     lgen, gen_iter = lgen + cur_loss, gen_iter + 1
             elif isinstance(loss, DiscriminatorLoss):
-                cur_loss = loss.train_ops(self._get_arguments(self.loss_arg_maps[name]))
+                cur_loss = loss.train_ops(**self._get_arguments(self.loss_arg_maps[name]))
                 self.loss_logs[name].append(cur_loss)
                 ldis, dis_iter = ldis + cur_loss, dis_iter + 1
         return lgen, ldis, gen_iter, dis_iter
@@ -276,7 +279,7 @@ class Trainer(object):
                     raise Exception("Inputs not provided for metric {}".format(name))
                 else:
                     # NOTE(avik-pal): Needs to be changed if the user decides not to feed in generator and discriminator
-                    self.metric_logs[name].append(metric.metric_ops(self._get_arguments(self.metric_arg_maps[name]),
+                    self.metric_logs[name].append(metric.metric_ops(**self._get_arguments(self.metric_arg_maps[name]),
                                                                     **kwargs[name + '_inputs']))
                     self.log_metrics(self, epoch)
 
