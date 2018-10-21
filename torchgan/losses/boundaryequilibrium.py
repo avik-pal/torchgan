@@ -8,8 +8,11 @@ class BoundaryEquilibriumGeneratorLoss(GeneratorLoss):
     r"""Boundary Equilibrium GAN generator loss from
     `"BEGAN : Boundary Equilibrium Generative Adversarial Networks
     by Berthelot et. al." <https://arxiv.org/abs/1703.10717>`_ paper
+
     The loss can be described as
+
     .. math:: L(G) = D(G(z))
+
     where
     - G : Generator
     - D : Discriminator
@@ -26,9 +29,13 @@ class BoundaryEquilibriumDiscriminatorLoss(DiscriminatorLoss):
     r"""Boundary Equilibrium GAN discriminator loss from
     `"BEGAN : Boundary Equilibrium Generative Adversarial Networks
     by Berthelot et. al." <https://arxiv.org/abs/1703.10717>`_ paper
+
     The loss can be described as
+
     .. math:: L(D) = D(x) - k_t \times D(G(z))
+
     .. math:: k_{t+1} = k_t + \lambda \times (\gamma \times D(x) - D(G(z)))
+
     where
     - G : Generator
     - D : Discriminator
@@ -49,7 +56,8 @@ class BoundaryEquilibriumDiscriminatorLoss(DiscriminatorLoss):
         self.gamma = gamma
         self.convergence_metric = None
 
-    r"""
+    def forward(self, dx, dgz):
+        r"""
         Args:
             dx (torch.Tensor) : Output of the Discriminator. It must have the dimensions
                                 (N, \*) where \* means any number of additional dimensions.
@@ -57,28 +65,29 @@ class BoundaryEquilibriumDiscriminatorLoss(DiscriminatorLoss):
                                  (N, \*) where \* means any number of additional dimensions.
         Returns:
             scalar tuple if reduction is applied else Tensor tuple each with dimensions (N, \*).
-    """
-    def forward(self, dx, dgz):
+        """
         loss_real = reduce(dx, self.reduction)
         loss_fake = reduce(dgz, self.reduction)
         loss_total = loss_real - self.k * loss_fake
         return loss_total, loss_real, loss_fake
 
-    r"""Change the default value of k
+    def set_k(self, k=0.0):
+        r"""Change the default value of k
+
         Args:
             k (float, optional) : New value to be set.
-    """
-    def set_k(self, k=0.0):
+        """
         self.k = k
 
-    r"""Update the running mean of k for each forward pass
-    The update takes place as
-    .. math:: k_{t+1} = k_t + \lambda \times (\gamma \times D(x) - D(G(z)))
-    Args:
-        loss_real: ..math:: D(x)
-        loss_fake: ..math:: D(G(z))
-    """
     def update_k(self, loss_real, loss_fake):
+        r"""Update the running mean of k for each forward pass
+        The update takes place as
+        .. math:: k_{t+1} = k_t + \lambda \times (\gamma \times D(x) - D(G(z)))
+
+        Args:
+            loss_real: ..math:: D(x)
+            loss_fake: ..math:: D(G(z))
+        """
         diff = self.gamma * loss_real - loss_fake
         self.k += self.lambd * diff
         # TODO(Aniket1998): Develop this into a proper TorchGAN convergence metric
