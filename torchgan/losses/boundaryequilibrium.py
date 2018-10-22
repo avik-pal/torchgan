@@ -14,8 +14,10 @@ class BoundaryEquilibriumGeneratorLoss(GeneratorLoss):
     .. math:: L(G) = D(G(z))
 
     where
+
     - G : Generator
     - D : Discriminator
+
     Args:
         reduction (string, optional): Specifies the reduction to apply to the output.
             If `none` no reduction will be applied. If `elementwise_mean` the sum of
@@ -37,11 +39,13 @@ class BoundaryEquilibriumDiscriminatorLoss(DiscriminatorLoss):
     .. math:: k_{t+1} = k_t + \lambda \times (\gamma \times D(x) - D(G(z)))
 
     where
+
     - G : Generator
     - D : Discriminator
     - :math:`k_t` : Running average of the balance point of G and D
     - :math:`\lambda` : Learning rate of the running average
     - :math:`\gamma` : Goal bias hyperparameter
+
     Args:
         reduction (string, optional): Specifies the reduction to apply to the output.
             If `none` no reduction will be applied. If `elementwise_mean` the sum of
@@ -85,8 +89,8 @@ class BoundaryEquilibriumDiscriminatorLoss(DiscriminatorLoss):
         .. math:: k_{t+1} = k_t + \lambda \times (\gamma \times D(x) - D(G(z)))
 
         Args:
-            loss_real: ..math:: D(x)
-            loss_fake: ..math:: D(G(z))
+            loss_real: :math:`D(x)`
+            loss_fake: :math:`D(G(z))`
         """
         diff = self.gamma * loss_real - loss_fake
         self.k += self.lambd * diff
