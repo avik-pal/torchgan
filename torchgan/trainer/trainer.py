@@ -60,22 +60,23 @@ class Trainer(object):
         recon (str, optional): Directory where the sampled images are saved. Make sure the directory exists from
                        beforehand.
         log_tensorboard (bool, optional): If `True`, tensorboard logs will be generated in the `runs` directory.
+        test_noise (torch.Tensor, optional): If provided then it will be used as the noise for image sampling.
 
     Any other argument that you need to store in the object can be simply passed via keyword arguments.
 
     Example:
-        >>> dcgantrainer = Trainer(
-                          {"generator": {"name": DCGANGenerator, "args": {"out_channels": 1, "step_channels": 16}},
-                           "discriminator": {"name": DCGANDiscriminator, "args": {"in_channels": 1, "step_channels": 16}}},
-                          {"optimizer_generator": {"name": Adam, "args": {"lr": 0.0002, "betas": (0.5, 0.999)}},
-                           "optimizer_discriminator": {"name": Adam, "args": {"lr": 0.0002, "betas": (0.5, 0.999)}}},
-                          [MinimaxGeneratorLoss(), MinimaxDiscriminatorLoss()],
-                          sample_size=64, epochs=20)
+        >>> dcgan = Trainer(
+                    {"generator": {"name": DCGANGenerator, "args": {"out_channels": 1, "step_channels": 16}},
+                     "discriminator": {"name": DCGANDiscriminator, "args": {"in_channels": 1, "step_channels": 16}}},
+                    {"optimizer_generator": {"name": Adam, "args": {"lr": 0.0002, "betas": (0.5, 0.999)}},
+                     "optimizer_discriminator": {"name": Adam, "args": {"lr": 0.0002, "betas": (0.5, 0.999)}}},
+                    [MinimaxGeneratorLoss(), MinimaxDiscriminatorLoss()],
+                    sample_size=64, epochs=20)
     """
     def __init__(self, models, optimizers, losses_list, metrics_list=None, schedulers=None,
                  device=torch.device("cuda:0"), ncritic=None, batch_size=128,
                  sample_size=8, epochs=5, checkpoints="./model/gan", retain_checkpoints=5,
-                 recon="./images", log_tensorboard=True, **kwargs):
+                 recon="./images", log_tensorboard=True, test_noise=None, **kwargs):
         self.device = device
         self.model_names = []
         for key, val in models.items():
