@@ -123,11 +123,15 @@ class Trainer(object):
         self.checkpoints = checkpoints
         self.retain_checkpoints = retain_checkpoints
         self.recon = recon
-        self.test_noise = []
-        for model in self.model_names:
-            if isinstance(getattr(self, model), Generator):
-                self.test_noise.append(torch.randn(self.sample_size, getattr(self, model).encoding_dims,
-                                                   device=self.device) if test_noise is None else test_noise)
+        # NOTE(avik-pal): We should also check if the length of the list is equal to the number of
+        #                 generators
+        if test_noise is None or type(test_noise) is not list:
+            self.test_noise = []
+            for model in self.model_names:
+                if isinstance(getattr(self, model), Generator):
+                    self.test_noise.append(torch.randn(self.sample_size,
+                                                getattr(self, model).encoding_dims,
+                                                device=self.device) if test_noise is None else test_noise)
         # Not needed but we need to store this to avoid errors. Also makes life simpler
         self.noise = torch.randn(1)
         self.real_inputs = torch.randn(1)
@@ -531,9 +535,9 @@ class Trainer(object):
                 self.save_model(epoch)
 
             self.train_logger(epoch,
-                              {'Generator Loss': self.loss_information['generator_losses'] /
+                              {'Generator Loss': self.loss_information['generator_losses'] /\
                               self.loss_information['generator_iters'],
-                              'Discriminator Loss': self.loss_information['discriminator_losses'] /
+                              'Discriminator Loss': self.loss_information['discriminator_losses'] /\
                               self.loss_information['discriminator_iters']})
 
             for model in self.model_names:

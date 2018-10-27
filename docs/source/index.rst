@@ -20,6 +20,7 @@ The :mod:`torchgan` package consists of various generative adversarial networks 
     metrics
     models
     trainer
+    experimental
 
 .. toctree::
     :maxdepth: 2
