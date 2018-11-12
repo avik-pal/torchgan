@@ -10,7 +10,7 @@ class TestModels(unittest.TestCase):
     def test_dcgan_generator(self):
         encodings = [50, 100]
         channels = [3, 4]
-        out_size = [32, 64]
+        out_size = [32, 256]
         step = [64, 128]
         batchnorm = [True, False]
         nonlinearities = [None, torch.nn.ReLU()]
@@ -50,7 +50,8 @@ class TestModels(unittest.TestCase):
             x = torch.randn(10, encodings[i])
             gen = ConditionalGANGenerator(classes[i], encodings[i], out_size[i], channels[i], ch,
                                           batchnorm[i], nonlinearities[i], last_nonlinearity[i])
-            y = gen(x, torch.rand(10, classes[i]))
+            labels = torch.randint(0, classes[i], (10,))
+            y = gen(x, labels)
             assert y.shape == (10, channels[i], out_size[i], out_size[i])
 
     def test_conditional_gan_discriminator(self):
@@ -66,7 +67,8 @@ class TestModels(unittest.TestCase):
             x = torch.randn(10, channels[i], in_size[i], in_size[i])
             gen = ConditionalGANDiscriminator(classes[i], in_size[i], channels[i], ch,
                                               batchnorm[i], nonlinearities[i], last_nonlinearity[i])
-            y = gen(x, torch.rand(10, classes[i]))
+            labels = torch.randint(0, classes[i], (10,))
+            y = gen(x, labels)
             assert y.shape == (10,)
 
     def test_infogan_generator(self):
@@ -114,11 +116,12 @@ class TestModels(unittest.TestCase):
         channels = [3, 4]
         out_size = [32, 64]
         step = [64, 128]
+        scale = [2, 2]
         batchnorm = [True, False]
         nonlinearities = [None, torch.nn.ReLU()]
         last_nonlinearity = [None, torch.nn.LeakyReLU()]
         for i in range(2):
-            gen = AutoEncodingGenerator(encodings[i], out_size[i], channels[i], step[i],
+            gen = AutoEncodingGenerator(encodings[i], out_size[i], channels[i], step[i], scale[i],
                                         batchnorm[i], nonlinearities[i], last_nonlinearity[i])
             z = torch.rand(10, encodings[i])
             x = gen(z)
@@ -129,11 +132,12 @@ class TestModels(unittest.TestCase):
         encodings = [50, 100]
         in_size = [32, 64]
         step = [64, 128]
+        scale = [2, 2]
         batchnorm = [True, False]
         nonlinearities = [None, torch.nn.ReLU()]
         last_nonlinearity = [None, torch.nn.LeakyReLU()]
         for i in range(2):
-            dis = AutoEncodingDiscriminator(in_size[i], channels[i], encodings[i], step[i],
+            dis = AutoEncodingDiscriminator(in_size[i], channels[i], encodings[i], step[i], scale[i],
                                             batchnorm[i], nonlinearities[i], last_nonlinearity[i])
             x = torch.rand(10, channels[i], in_size[i], in_size[i])
             loss = dis(x)

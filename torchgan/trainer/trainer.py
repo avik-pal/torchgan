@@ -1,3 +1,4 @@
+import os
 import torch
 import torchvision
 from warnings import warn
@@ -155,9 +156,12 @@ class Trainer(object):
             }
         self.nrow = 8
         for key, val in kwargs.items():
-            if key in self.__dict__():
+            if key in self.__dict__:
                 warn("Overiding the default value of {} from {} to {}".format(key, getattr(self, key), val))
             setattr(self, key, val)
+
+        os.makedirs(self.checkpoints, exist_ok=True)
+        os.makedirs(self.recon, exist_ok=True)
 
     def save_model(self, epoch, save_items=None):
         r"""Function saves the model and some necessary information along with it. List of items
@@ -278,7 +282,14 @@ class Trainer(object):
                 print("Generating and Saving Images to {}".format(save_path))
                 generator = getattr(self, model)
                 with torch.no_grad():
-                    images = generator(self.test_noise[pos].to(self.device))
+                    # TODO(Aniket1998): This is a terrible temporary fix
+                    # Sampling images varies from generator to generator and
+                    # a more robust sample_images method is required
+                    if generator.label_type == 'none':
+                        images = generator(self.test_noise[pos].to(self.device))
+                    else:
+                        label_gen = torch.randint(0, generator.num_classes, (self.sample_size,), device=self.device)
+                        images = generator(self.test_noise[pos].to(self.device), label_gen)
                     pos = pos + 1
                     img = torchvision.utils.make_grid(images)
                     torchvision.utils.save_image(img, save_path, nrow=self.nrow)
@@ -295,6 +306,18 @@ class Trainer(object):
         print('Epoch {} Summary: '.format(epoch + 1))
         for name, val in running_losses.items():
             print('Mean {} : {}'.format(name, val))
+
+    def tensorboard_log_gradients(self):
+        r"""Function for gradient logging in tensorboard. Currently logs the sum of the L2 norm of the gradients
+        of all the parameters of a model. Requires `log_tensorboard` to be set to `True`
+        """
+        if self.log_tensorboard:
+            for name in self.model_names:
+                model = getattr(self, name)
+                gradsum = 0.0
+                for p in model.parameters():
+                    gradsum += p.norm(2).item()
+                self.writer.add_scalar('Gradients/{}'.format(name), gradsum, self._get_step())
 
     def tensorboard_log_losses(self):
         r"""This function handles all form of logging with tensorboard for losses. It logs 4 major things.
@@ -334,10 +357,10 @@ class Trainer(object):
         Args:
             epoch (int): Current epoch at which the sampler is being called.
         """
-        if self.tensorboard_log:
+        if self.log_tensorboard:
             if self.metric_logs:
                 for name, value in self.metric_logs.items():
-                    self.writer.add_scalar("Metrics/{}".format(name), value, epoch)
+                    self.writer.add_scalar("Metrics/{}".format(name), value[-1], epoch)
 
     def set_arg_maps(self, mappings):
         r"""Helper function to allow custom parameter names in Loss and Metric Functions.
@@ -371,7 +394,8 @@ class Trainer(object):
             arguments are not present an error is thrown.
         """
         sig = signature(func)
-        args = [p.name for p in sig.parameters.values() if p.default is _empty]
+        args = [p.name for p in sig.parameters.values() if p.default is _empty\
+                    and p.name != 'kwargs' and p.name != 'args']
         for arg in args:
             if arg not in self.__dict__:
                 raise Exception("Argument : {} not present. If the value is stored with some other\
@@ -408,18 +432,6 @@ class Trainer(object):
             A dictionary mapping the argument name to the value of the argument.
         """
         return dict(zip(arg_map, itemgetter(*arg_map)(self.__dict__)))
-
-    def train_stopper(self):
-        r"""Helper function to allow interrupting the train process. This comes handy when the
-        discriminator needs to be trained more than the generator.
-
-        Returns:
-            Bool value which is used to stop the particular training iteration
-        """
-        if self.ncritic is None:
-            return False
-        else:
-            return self.loss_information["discriminator_iters"] % self.ncritic != 0
 
     def train_iter_custom(self):
         r"""Function that needs to be extended if `train_iter` is to be modified. Use this function
@@ -469,8 +481,8 @@ class Trainer(object):
         if self.metric_logs is None:
             warn('No evaluation metric logs present')
         else:
-            for name, val in self.metric_logs.item():
-                print('{} : {}'.format(name, val))
+            for name, val in self.metric_logs.items():
+                print('{} : {}'.format(name, val[-1]))
             self.tensorboard_log_metrics(epoch)
 
     def eval_ops(self, epoch, **kwargs):
@@ -483,12 +495,9 @@ class Trainer(object):
         self.sample_images(epoch)
         if self.metrics is not None:
             for name, metric in self.metrics.items():
-                if name + '_inputs' not in kwargs:
-                    raise Exception("Inputs not provided for metric {}".format(name))
-                else:
-                    self.metric_logs[name].append(metric.metric_ops(**self._get_arguments(self.metric_arg_maps[name]),
-                                                                    **kwargs[name + '_inputs']))
-                    self.log_metrics(self, epoch)
+                self.metric_logs[name].append(metric.metric_ops(\
+                    **self._get_arguments(self.metric_arg_maps[name])))
+                self.log_metrics(epoch)
 
     def optim_ops(self):
         r"""Runs all the schedulers at the end of every epoch.
@@ -515,6 +524,8 @@ class Trainer(object):
                 if type(data) is tuple or type(data) is list:
                     self.real_inputs = data[0].to(self.device)
                     self.labels = data[1].to(self.device)
+                elif type(data) is torch.Tensor:
+                    self.real_inputs = data.to(self.device)
                 else:
                     self.real_inputs = data
 
@@ -525,9 +536,7 @@ class Trainer(object):
                 self.loss_information['discriminator_iters'] += dis_iter
 
                 self.tensorboard_log_losses()
-
-                if self.train_stopper():
-                    break
+                self.tensorboard_log_gradients()
 
             if "save_items" in kwargs:
                 self.save_model(epoch, kwargs["save_items"])
@@ -552,5 +561,6 @@ class Trainer(object):
         self.writer = SummaryWriter()
         self._store_loss_maps()
         self._store_metric_maps()
+        self.batch_size = data_loader.batch_size
         self.train(data_loader, **kwargs)
         self.writer.close()
