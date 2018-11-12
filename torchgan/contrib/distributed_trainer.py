@@ -151,6 +151,9 @@ class DistributedTrainer(Trainer):
             }
         self.nrow = 8
         for key, val in kwargs.items():
-            if key in self.__dict__():
+            if key in self.__dict__:
                 warn("Overiding the default value of {} from {} to {}".format(key, getattr(self, key), val))
             setattr(self, key, val)
+
+        os.makedirs(self.checkpoints, exist_ok=True)
+        os.makedirs(self.recon, exist_ok=True)
