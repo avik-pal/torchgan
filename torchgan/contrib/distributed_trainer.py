@@ -3,6 +3,8 @@ import torchvision
 import torch.nn as nn
 from warnings import warn
 from ..trainer.trainer import Trainer
+from ..models.model import Generator, Discriminator
+from ..losses.loss import GeneratorLoss, DiscriminatorLoss
 
 __all__ = ['DistributedTrainer']
 
