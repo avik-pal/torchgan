@@ -174,8 +174,7 @@ class Trainer(object):
             'loss_information': self.loss_information,
             'loss_objects': self.losses,
             'metric_objects': self.metrics,
-            'loss_logs': (self.logger.get_loss_viz()).logs,
-            'metric_logs': (self.logger.get_metric_viz()).logs
+            'loss_logs': (self.logger.get_loss_viz()).logs
         }
         for save_item in self.model_names + self.optimizer_names:
             model.update({save_item: (getattr(self, save_item)).state_dict()})
@@ -217,7 +216,6 @@ class Trainer(object):
             self.metrics = checkpoint['metric_objects']
             self.loss_information = checkpoint['loss_information']
             (self.logger.get_loss_viz()).logs = checkpoint['loss_logs']
-            (self.logger.get_metric_viz()).logs = checkpoint['metric_logs']
             for load_item in self.model_names + self.optimizer_names:
                 getattr(self, load_item).load_state_dict(checkpoint[load_item])
             if load_items is not None:

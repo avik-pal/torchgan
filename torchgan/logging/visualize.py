@@ -49,7 +49,7 @@ class LossVisualize(Visualize):
                 self.writer.add_scalar('Losses/{}-Generator'.format(name), val[0], self.tensorboard_step)
                 self.writer.add_scalar('Losses/{}-Discriminator'.format(name), val[1], self.tensorboard_step)
             else:
-                self.writer.add_scalar('Losses/{}'.format(name), val, self._get_step(False))
+                self.writer.add_scalar('Losses/{}'.format(name), val, self.tensorboard_step)
 
     def log_items(self, running_losses):
         for name, val in running_losses.items():
