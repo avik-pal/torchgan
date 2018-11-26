@@ -82,7 +82,7 @@ class GradientVisualize(Visualize):
 
     def __call__(self, trainer, **kwargs):
         for name in trainer.model_names:
-            model = getattr(self, name)
+            model = getattr(trainer, name)
             gradsum = 0.0
             for p in model.parameters():
                 gradsum += p.norm(2).item()
