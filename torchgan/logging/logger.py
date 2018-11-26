@@ -17,7 +17,7 @@ class Logger(object):
             self.logger_end_epoch.append(MetricVisualize(metrics_list, tensorboard=tensorboard,
                                                          writer=self.writer))
         self.logger_mid_epoch.append(LossVisualize(losses_list, tensorboard=tensorboard, writer=self.writer))
-        self.no_print = True
+        self.no_print = no_print
 
     def get_loss_viz(self):
         return self.logger_mid_epoch[1]
