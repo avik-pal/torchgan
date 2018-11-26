@@ -1,4 +1,5 @@
 from .visualize import *
+from tensorboardX import SummaryWriter
 
 __all__ = ['Logger']
 
@@ -16,11 +17,11 @@ class Logger(object):
             self.logger_end_epoch.append(MetricVisualize(metrics_list, tensorboard=tensorboard,
                                                          writer=self.writer))
         self.logger_mid_epoch(LossVisualize(losses_list, tensorboard=tensorboard, writer=self.writer))
-        self.no_print=True
-    
+        self.no_print = True
+
     def get_loss_viz(self):
         return self.logger_mid_epoch[1]
-    
+
     def get_metric_viz(self):
         return self.logger_end_epoch[0]
 
@@ -40,7 +41,7 @@ class Logger(object):
                 logger(trainer, lock_items=True)
             else:
                 logger(*args, lock_items=True)
-    
+
     def run_end_epoch(self, trainer, epoch, *args):
         if not self.no_print:
             print("Epoch {} Summary".format(epoch))

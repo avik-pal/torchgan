@@ -1,4 +1,7 @@
+import torch
+import torchvision
 from tensorboardX import SummaryWriter
+from ..models.model import Generator, Discriminator
 
 __all__ = ['Visualize', 'LossVisualize', 'MetricVisualize',
            'GradientVisualize', 'ImageVisualize']
@@ -60,7 +63,6 @@ class LossVisualize(Visualize):
         running_losses = {"Running Discriminator Loss": running_discriminator_loss,
                           "Running Generator Loss": running_generator_loss}
         super(Visualize, self).__call__(running_losses, **kwargs)
-        
 
 class MetricVisualize(Visualize):
     def log_tensorboard(self):
@@ -106,7 +108,7 @@ class ImageVisualize(Visualize):
         save_path = "{}/epoch{}_{}.png".format(trainer.recon, self.tensorboard_step, model)
         print("Generating and Saving Images to {}".format(save_path))
         torchvision.utils.save_image(image, save_path, nrow=self.nrow)
-        
+
     def __call__(self, trainer, **kwargs):
         pos = 0
         for model in trainer.model_names:
@@ -114,6 +116,6 @@ class ImageVisualize(Visualize):
                 generator = getattr(self, model)
                 with torch.no_grad():
                     image = generator(*self.test_noise[pos])
-                    image = torchvision.utils.make_grid(images)
+                    image = torchvision.utils.make_grid(image)
                     super(Visualize, self).__call__(trainer, image, model, **kwargs)
                 pos = pos + 1

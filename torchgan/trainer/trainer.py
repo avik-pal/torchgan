@@ -80,7 +80,7 @@ class Trainer(object):
     def __init__(self, models, optimizers, losses_list, metrics_list=None, schedulers=None,
                  device=torch.device("cuda:0"), ncritic=None, batch_size=128, epochs=5,
                  sample_size=8, checkpoints="./model/gan", retain_checkpoints=5, recon="./images",
-                 tensorboard=True, log_dir=None, test_noise=None, nrow=8, no_print=False,**kwargs):
+                 tensorboard=True, log_dir=None, test_noise=None, nrow=8, no_print=False, **kwargs):
         self.device = device
         self.model_names = []
         for key, val in models.items():
