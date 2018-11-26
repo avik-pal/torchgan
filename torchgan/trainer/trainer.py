@@ -174,8 +174,8 @@ class Trainer(object):
             'loss_information': self.loss_information,
             'loss_objects': self.losses,
             'metric_objects': self.metrics,
-            'loss_logs': self.loss_logs,
-            'metric_logs': self.metric_logs
+            'loss_logs': (self.logger.get_loss_viz()).logs,
+            'metric_logs': (self.logger.get_metric_viz()).logs
         }
         for save_item in self.model_names + self.optimizer_names:
             model.update({save_item: (getattr(self, save_item)).state_dict()})
@@ -216,8 +216,8 @@ class Trainer(object):
             self.losses = checkpoint['loss_objects']
             self.metrics = checkpoint['metric_objects']
             self.loss_information = checkpoint['loss_information']
-            self.loss_logs = checkpoint['loss_logs']
-            self.metric_logs = checkpoint['metric_logs']
+            (self.logger.get_loss_viz()).logs = checkpoint['loss_logs']
+            (self.logger.get_metric_viz()).logs = checkpoint['metric_logs']
             for load_item in self.model_names + self.optimizer_names:
                 getattr(self, load_item).load_state_dict(checkpoint[load_item])
             if load_items is not None:
@@ -319,8 +319,8 @@ class Trainer(object):
         """
         self.train_iter_custom()
         ldis, lgen, dis_iter, gen_iter = 0.0, 0.0, 0, 0
+        loss_logs = self.logger.get_loss_viz()
         for name, loss in self.losses.items():
-            loss_logs = self.logger.get_loss_viz()
             if isinstance(loss, GeneratorLoss) and isinstance(loss, DiscriminatorLoss):
                 cur_loss = loss.train_ops(**self._get_arguments(self.loss_arg_maps[name]))
                 loss_logs.logs[name].append(cur_loss)
