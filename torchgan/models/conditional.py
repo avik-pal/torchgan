@@ -36,7 +36,7 @@ class ConditionalGANGenerator(DCGANGenerator):
     def forward(self, z, y):
         y_emb = self.label_embeddings(y.type(torch.LongTensor).to(y.device))
         return super(ConditionalGANGenerator, self).forward(torch.cat((z, y_emb), dim=1))
-    
+
     def sampler(self, sample_size, device):
         r"""Function to allow sampling data at inference time.
 
