@@ -28,6 +28,19 @@ class Generator(nn.Module):
                 nn.init.constant_(m.weight, 1.0)
                 nn.init.constant_(m.bias, 0.0)
 
+    def sampler(self, sample_size, device):
+        r"""Function to allow sampling data at inference time. Models requiring
+        input in any other format must override it in the subclass.
+
+        Args:
+            sample_size (int): The number of images to be generated
+            device (torch.device): The device on which the data must be generated
+
+        Returns:
+            A list of the items required as input
+        """
+        return [torch.randn(sample_size, self.encoding_dims, device=device)]
+
 class Discriminator(nn.Module):
     r"""Base class for all Discriminator models
 
