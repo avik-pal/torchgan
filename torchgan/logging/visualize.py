@@ -92,10 +92,10 @@ class ImageVisualize(Visualize):
     def __init__(self, trainer, tensorboard=True, log_dir=None, writer=None,
                  test_noise=None, nrow=8):
         self.writer = SummaryWriter(log_dir) if writer is None else writer
-        self.noise = []
+        self.test_noise = []
         for model in trainer.model_names:
             if isinstance(getattr(trainer, model), Generator):
-                self.test_noise.append(getattr(self, model).sampler(trainer.sample_size, trainer.device)
+                self.test_noise.append(getattr(trainer, model).sampler(trainer.sample_size, trainer.device)
                                        if test_noise is None else test_noise)
         self.tensorboard = tensorboard
         self.tensorboard_step = 1
@@ -113,7 +113,7 @@ class ImageVisualize(Visualize):
         pos = 0
         for model in trainer.model_names:
             if isinstance(getattr(trainer, model), Generator):
-                generator = getattr(self, model)
+                generator = getattr(trainer, model)
                 with torch.no_grad():
                     image = generator(*self.test_noise[pos])
                     image = torchvision.utils.make_grid(image)
