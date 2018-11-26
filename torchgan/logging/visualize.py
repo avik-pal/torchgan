@@ -33,9 +33,6 @@ class Visualize(object):
         self.tensorboard_step_update()
 
 class LossVisualize(Visualize):
-    def __init__(self, *args, **kwargs):
-        super(Visualize, self).__init__(*args, **kwargs)
-
     def log_tensorboard(self, running_losses):
         self.writer.add_scalar("Running Discriminator Loss",
                                running_losses["Running Discriminator Loss"],
@@ -65,12 +62,9 @@ class LossVisualize(Visualize):
             trainer.loss_information["discriminator_iters"]
         running_losses = {"Running Discriminator Loss": running_discriminator_loss,
                           "Running Generator Loss": running_generator_loss}
-        super(Visualize, self).__call__(running_losses, **kwargs)
+        super(LossVisualize, self).__call__(running_losses, **kwargs)
 
 class MetricVisualize(Visualize):
-    def __init__(self, *args, **kwargs):
-        super(Visualize, self).__init__(*args, **kwargs)
-
     def log_tensorboard(self):
         for name, value in self.logs.items():
             self.writer.add_scalar("Metrics/{}".format(name), value[-1], self.tensorboard_step)
@@ -80,9 +74,6 @@ class MetricVisualize(Visualize):
             print('{} : {}'.format(name, val[-1]))
 
 class GradientVisualize(Visualize):
-    def __init__(self, *args, **kwargs):
-        super(Visualize, self).__init__(*args, **kwargs)
-
     def log_tensorboard(self, name, gradsum):
         self.writer.add_scalar('Gradients/{}'.format(name), gradsum, self.tensorboard_step)
 
@@ -95,12 +86,11 @@ class GradientVisualize(Visualize):
             gradsum = 0.0
             for p in model.parameters():
                 gradsum += p.norm(2).item()
-            super(Visualize, self).__call__(name, gradsum, **kwargs)
+            super(GradientVisualize, self).__call__(name, gradsum, **kwargs)
 
 class ImageVisualize(Visualize):
     def __init__(self, trainer, tensorboard=True, log_dir=None, writer=None,
                  test_noise=None, nrow=8):
-        super(Visualize, self).__init__([], writer=True) # Samll hack
         self.writer = SummaryWriter(log_dir) if writer is None else writer
         self.test_noise = []
         for model in trainer.model_names:
@@ -127,5 +117,5 @@ class ImageVisualize(Visualize):
                 with torch.no_grad():
                     image = generator(*self.test_noise[pos])
                     image = torchvision.utils.make_grid(image)
-                    super(Visualize, self).__call__(trainer, image, model, **kwargs)
+                    super(ImageVisualize, self).__call__(trainer, image, model, **kwargs)
                 pos = pos + 1
