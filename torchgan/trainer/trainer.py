@@ -63,6 +63,7 @@ class Trainer(object):
         tensorboard (bool, optional): If `True`, tensorboard logs will be generated in the `runs` directory.
         log_dir (str, optional): The directory for logging tensorboard.
         test_noise (torch.Tensor, optional): If provided then it will be used as the noise for image sampling.
+        nrow (int, optional): Number of rows in which the image is to be stored.
         no_print (bool, optional): Set it to `True` if you don't want to see any result printed to the console.
 
     Any other argument that you need to store in the object can be simply passed via keyword arguments.
@@ -79,7 +80,7 @@ class Trainer(object):
     def __init__(self, models, optimizers, losses_list, metrics_list=None, schedulers=None,
                  device=torch.device("cuda:0"), ncritic=None, batch_size=128, epochs=5,
                  sample_size=8, checkpoints="./model/gan", retain_checkpoints=5, recon="./images",
-                 tensorboard=True, log_dir=None, test_noise=None, no_print=False,**kwargs):
+                 tensorboard=True, log_dir=None, test_noise=None, nrow=8, no_print=False,**kwargs):
         self.device = device
         self.model_names = []
         for key, val in models.items():

@@ -1,3 +1,5 @@
+from .visualize import *
+
 __all__ = ['Logger']
 
 class Logger(object):
