@@ -49,8 +49,8 @@ class Logger(object):
             if type(logger).__name__ is "LossVisualize" or\
                type(logger).__name__ is "GradientVisualize" or\
                type(logger).__name__ is "ImageVisualize":
-                logger(trainer, lock_items=not self.no_print)
+                logger(trainer, lock_items=self.no_print)
             elif type(logger).__name__ is "MetricVisualize":
-                logger(lock_items=not self.no_print)
+                logger(lock_items=self.no_print)
             else:
                 logger(*args, lock_items=True)
